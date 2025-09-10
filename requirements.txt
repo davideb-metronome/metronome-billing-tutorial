@@ -1,0 +1,5 @@
+# Metronome SDK for billing integration (cap major to avoid breaking changes)
+metronome-sdk<2.0.0
+
+# Load METRONOME_BEARER_TOKEN from .env in scripts
+python-dotenv>=1.0.0
