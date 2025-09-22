@@ -16,3 +16,11 @@ venv/
 
 # OS
 .DS_Store
+
+# Tutorial local state (ids only, no secrets)
+.metronome_config.json
+MAINTAINERS.md
+
+# Local clones and references (not part of the tutorial snapshot)
+_external/
+_refs/

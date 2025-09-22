@@ -3,3 +3,6 @@ metronome-sdk<2.0.0
 
 # Load METRONOME_BEARER_TOKEN from .env in scripts
 python-dotenv>=1.0.0
+
+# Minimal API for Episode 3 endpoint
+Flask>=2.3,<3.0

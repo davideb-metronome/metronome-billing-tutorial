@@ -46,7 +46,7 @@ cp .env.example .env
 # Edit .env and set METRONOME_BEARER_TOKEN=<your_api_key>
 ```
 
-## Run the API check
+## Run the API check (Episode 2)
 
 ```bash
 python test_connection.py
@@ -56,6 +56,43 @@ Expected outcomes:
 - Success: prints a checkmark and (if present) the first customer’s name.
 - Authentication error: instructs you to verify `METRONOME_BEARER_TOKEN`.
 - Other error: prints the error and suggests next steps.
+
+## Episode 3: Event Ingestion (HTTP endpoint)
+
+This episode mirrors the reference demo by exposing a minimal HTTP endpoint
+that sends a usage event to Metronome using a thin SDK wrapper.
+
+What’s new:
+- `app.py` — Flask app with `POST /api/generate`.
+- `services/metronome_client.py` — Minimal wrapper around the Metronome SDK.
+- `config.py` — Loads env vars (e.g., `METRONOME_BEARER_TOKEN`) and shared constants.
+- `nova_event.json` — Sample payload (teaching artifact only; not executed).
+
+Before sending events (one-time, via Metronome dashboard):
+- Create a demo customer and add an ingest alias (e.g., `jane@example.com`).
+- Or copy an existing `customer_id` if you prefer sending by ID.
+
+Run the API:
+```bash
+python app.py
+```
+
+Send an event with curl:
+```bash
+# Uses DEMO_CUSTOMER_ALIAS from .env; include a deterministic transaction_id
+curl -s -X POST http://localhost:5000/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"tier":"ultra","transaction_id":"ep3-demo-001"}'
+```
+
+Notes:
+ - This app does not create customers and ignores identifiers in the request.
+   It always uses `DEMO_CUSTOMER_ALIAS` from `.env`. Create a customer in the
+   dashboard and attach that alias before sending events.
+ - Properties are strings per Metronome docs (e.g., `"num_images": "1"`).
+ - The response includes a `transaction_id` you can search in Connections → Events.
+ - Optional body fields: `model`, `region`. Required body fields: `tier`, `transaction_id` (idempotency key).
+ - If the env alias isn’t attached to a Metronome customer, ingestion may fail or be attributed once it is linked.
 
 ## Viewer Guide
 
