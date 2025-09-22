@@ -1,13 +1,6 @@
-# Usage-Based Billing Tutorial | Episode 2: Authentication and API basics
+# Metronome Usage-Based Billing Tutorial 
 
-This repository accompanies the [YouTube usage-based billing tutorial](https://youtube.com/playlist?list=PLUG2zXfT80sy3LGcEE7Z0XMOAB9i_4pGH&si=9ETDVYJND3P4kNBl) that integrates with Metronome’s API. Each episode builds on the previous one by adding files and features. The current snapshot includes a basic authentication check to Metronome.
-
-## What’s Here
-
-- `test_connection.py` — Verifies authentication and performs a simple API call (`customers.list`).
-- `requirements.txt` — Python dependencies for the scripts.
-- `.env.example` — Template for required environment variables.
-- `.gitignore` — Git ignore rules (updated to avoid committing secrets and Python artifacts).
+This repository accompanies the [YouTube usage-based billing tutorial](https://youtube.com/playlist?list=PLUG2zXfT80sy3LGcEE7Z0XMOAB9i_4pGH&si=9ETDVYJND3P4kNBl) that integrates with Metronome’s API. Each episode builds on the previous one by adding files and features. This code includes Episode 2 (auth check) and Episode 3 (HTTP ingest endpoint).
 
 ## Prerequisites
 
@@ -43,7 +36,9 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and set METRONOME_BEARER_TOKEN=<your_api_key>
+# Edit .env and set:
+#   METRONOME_BEARER_TOKEN=<your_api_key>
+#   DEMO_CUSTOMER_ALIAS=<your_ingest_alias>
 ```
 
 ## Run the API check (Episode 2)
@@ -66,11 +61,11 @@ What’s new:
 - `app.py` — Flask app with `POST /api/generate`.
 - `services/metronome_client.py` — Minimal wrapper around the Metronome SDK.
 - `config.py` — Loads env vars (e.g., `METRONOME_BEARER_TOKEN`) and shared constants.
-- `nova_event.json` — Sample payload (teaching artifact only; not executed).
 
 Before sending events (one-time, via Metronome dashboard):
-- Create a demo customer and add an ingest alias (e.g., `jane@example.com`).
+- Create a demo customer and add an ingest alias (e.g., `jane@nova.com`).
 - Or copy an existing `customer_id` if you prefer sending by ID.
+
 
 Run the API:
 ```bash
@@ -86,13 +81,11 @@ curl -s -X POST http://localhost:5000/api/generate \
 ```
 
 Notes:
- - This app does not create customers and ignores identifiers in the request.
-   It always uses `DEMO_CUSTOMER_ALIAS` from `.env`. Create a customer in the
+ - This app does not create customers. It always uses `DEMO_CUSTOMER_ALIAS` from `.env`. Create a customer in the
    dashboard and attach that alias before sending events.
  - Properties are strings per Metronome docs (e.g., `"num_images": "1"`).
  - The response includes a `transaction_id` you can search in Connections → Events.
- - Optional body fields: `model`, `region`. Required body fields: `tier`, `transaction_id` (idempotency key).
- - If the env alias isn’t attached to a Metronome customer, ingestion may fail or be attributed once it is linked.
+
 
 ## Viewer Guide
 
@@ -108,6 +101,12 @@ git checkout tags/ep02
 
 # Optional: create a working branch from the tag to avoid detached HEAD
 git checkout -b ep02-playground tags/ep02
+
+# Check out the Episode 3 snapshot
+git checkout tags/ep03
+
+# Optional: create a working branch for Episode 3
+git checkout -b ep03-playground tags/ep03
 ```
 
 Why branch from a tag? Checking out a tag puts you in a detached HEAD state (not on a branch). Creating a branch (e.g., `ep02-playground`) lets you make changes and commits without altering the tag, which remains an immutable snapshot.
