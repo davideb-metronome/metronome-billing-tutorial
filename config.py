@@ -20,4 +20,9 @@ DEMO_CUSTOMER_ALIAS = os.environ.get("DEMO_CUSTOMER_ALIAS")
 # Default event name for Nova
 EVENT_TYPE = "image_generation"
 
+# Billable metric display name
+BILLABLE_METRIC_NAME = "Nova Image Generation"
 
+# Default group keys for dimensional pricing
+# SDK shape: list-of-lists (one inner list per dimension), e.g., [["image_type"], ["region"]]
+BILLABLE_GROUP_KEYS = (("image_type",),)

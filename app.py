@@ -1,11 +1,13 @@
 """
-Episode 3: HTTP endpoint for sending usage events
-
  This runs a thin Flask HTTP boundary. The POST
  route `/api/generate` accepts JSON from external clients (curl today,
  a frontend later), validates it, then forwards a well-formed event to
  the Metronome client (SDK wrapper). The browser never calls Metronome
  directly; only the server does.
+
+ Episode 4 adds a local setup route `POST /api/metrics` that creates the
+ "Nova Image Generation" billable metric (SUM over "num_images", grouped by
+ `image_type`).
 """
 
 import logging
@@ -13,7 +15,13 @@ from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
 
-from config import METRONOME_BEARER_TOKEN, EVENT_TYPE, DEMO_CUSTOMER_ALIAS
+from config import (
+    METRONOME_BEARER_TOKEN,
+    EVENT_TYPE,
+    DEMO_CUSTOMER_ALIAS,
+    BILLABLE_METRIC_NAME,
+    BILLABLE_GROUP_KEYS,
+)
 from services.metronome_client import MetronomeClient
 
 
@@ -95,6 +103,47 @@ def generate_image():
     except Exception as e:
         logger.exception("Failed to send usage event")
         return jsonify({"error": f"Failed to send usage: {e}"}), 500
+
+
+@app.post("/api/metrics")
+def setup_metric():
+    """Create the Episode 4 billable metric.
+
+    Hardcoded to our demo defaults:
+    - name: BILLABLE_METRIC_NAME
+    - event_type: EVENT_TYPE
+    - aggregation: SUM over "num_images"
+    - group_keys: BILLABLE_GROUP_KEYS (from config)
+    - property_filters: require image_type and num_images to exist
+
+    Quick curl:
+      curl -sS -X POST http://localhost:5000/api/metrics | jq
+    """
+    try:
+        metric = client.create_billable_metric(
+            name=BILLABLE_METRIC_NAME,
+            event_type=EVENT_TYPE,
+            aggregation_type="SUM",
+            aggregation_key="num_images",
+            group_keys=[list(x) for x in BILLABLE_GROUP_KEYS],
+            property_filters=[
+                {"name": "image_type", "exists": True},
+                {"name": "num_images", "exists": True},
+            ],
+        )
+        logger.info(
+            "Created billable metric id=%s name=%s",
+            metric.get("id"),
+            metric.get("name"),
+        )
+        return jsonify({
+            "success": True,
+            "metric_name": BILLABLE_METRIC_NAME,
+            "metric": metric,
+        }), 201
+    except Exception as e:
+        logger.exception("Failed to create billable metric")
+        return jsonify({"error": f"Failed to create metric: {e}"}), 500
 
 
 if __name__ == "__main__":

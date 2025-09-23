@@ -87,6 +87,41 @@ Notes:
  - The response includes a `transaction_id` you can search in Connections → Events.
 
 
+## Episode 4: Billable Metrics (dimensional)
+
+This episode defines a single billable metric for our `EVENT_TYPE` and segments
+usage by tier (i.e image type), using group keys. We aggregate with `SUM` on the `num_images`
+property, and group by `image_type` so one metric reports `standard`,
+`high-res`, and `ultra` separately.
+
+What’s new:
+- `POST /api/setup/metric` — local-only setup route that creates the metric with safe defaults:
+  - name: "Nova Image Generation"
+  - aggregation_type: `SUM`, aggregation_key: `num_images`
+  - group_keys: `[["image_type"]]`
+  - property_filters: require `image_type` and `num_images` to exist
+
+Run the setup (one time per environment):
+```bash
+python app.py
+# in a separate terminal
+curl -sS -X POST http://localhost:5000/api/metrics | jq
+```
+
+Then send a couple of events (reuse Episode 3 curl):
+```bash
+curl -s -X POST http://localhost:5000/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"tier":"ultra","transaction_id":"ep4-demo-001"}'
+```
+
+Notes:
+- Properties are strings per Metronome docs (e.g., `"num_images": "1"`; categorical fields like `"image_type"` remain strings too).
+- Timestamps are RFC3339 UTC with trailing `Z`.
+- The setup route is not idempotent — calling it multiple times will create duplicate metrics.
+- Verify in Metronome: the "Nova Image Generation" metric should show a growing `SUM` and a breakdown by `image_type`.
+
+
 ## Viewer Guide
 
 Follow specific episode snapshots using Git tags. Episode snapshots correspond to Git tags. Note: Episode 1 had no code snapshot; the first tag with code is `ep02`. Create a branch from a tag to experiment without altering the snapshot.
