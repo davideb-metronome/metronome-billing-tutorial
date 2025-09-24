@@ -118,6 +118,92 @@ class MetronomeClient:
         resp = self.client.v1.billable_metrics.create(**params)
         return resp.data.model_dump() if hasattr(resp, "data") else {}
 
+    def list_billable_metrics(self) -> List[Dict]:
+        """List all billable metrics (as plain dicts)."""
+        resp = self.client.v1.billable_metrics.list()
+        return [m.model_dump() for m in getattr(resp, "data", [])]
+
+    def retrieve_billable_metric(self, billable_metric_id: str) -> Optional[Dict]:
+        """Retrieve a billable metric by ID (None if not found)."""
+        try:
+            resp = self.client.v1.billable_metrics.retrieve(billable_metric_id=billable_metric_id)
+            return resp.data.model_dump()
+        except Exception as e:
+            if "not found" in str(e).lower():
+                return None
+            raise
+
+    # ---- Products & pricing ----
+    def create_product(
+        self,
+        *,
+        name: str,
+        billable_metric_id: str,
+        pricing_group_key: Optional[List[str]] = None,
+        presentation_group_key: Optional[List[str]] = None,
+    ) -> Dict:
+        """Create a USAGE product tied to a billable metric.
+
+        - `pricing_group_key` to enable dimensional pricing on the product
+          (e.g., ["image_type"]).
+        - `presentation_group_key` to split invoice presentation by dimension
+          (e.g., ["image_type"]).
+        """
+        payload = {
+            "name": name,
+            "type": "USAGE",
+            "billable_metric_id": billable_metric_id,
+        }
+        if pricing_group_key:
+            payload["pricing_group_key"] = pricing_group_key
+        if presentation_group_key:
+            payload["presentation_group_key"] = presentation_group_key
+
+        resp = self.client.v1.contracts.products.create(**payload)
+        return resp.data.model_dump() if hasattr(resp, "data") else {}
+
+    def create_rate_card(self, *, name: str, description: str = "") -> Dict:
+        """Create a rate card for prices."""
+        resp = self.client.v1.contracts.rate_cards.create(
+            name=name,
+            description=description or f"Pricing for {name}",
+        )
+      
+        return resp.data.model_dump() if hasattr(resp, "data") else {}
+
+    def add_flat_rate(
+        self,
+        *,
+        rate_card_id: str,
+        product_id: str,
+        price_cents: int,
+        starting_at: str,
+        pricing_group_values: Optional[Dict[str, str]] = None,
+    ) -> Dict:
+        """Add a single FLAT rate to a rate card for a product.
+
+        Supports dimensional pricing via `pricing_group_values`, which should map
+        group key -> value (e.g., {"image_type": "ultra"}).
+        """
+        payload = {
+            "rate_card_id": rate_card_id,
+            "product_id": product_id,
+            "entitled": True,
+            "rate_type": "FLAT",
+            "price": price_cents,
+            "starting_at": starting_at,
+        }
+        if pricing_group_values:
+            payload["pricing_group_values"] = pricing_group_values
+
+        resp = self.client.v1.contracts.rate_cards.rates.add(**payload)
+       
+        if hasattr(resp, "data"):
+            return resp.data.model_dump()
+        return resp.model_dump() if hasattr(resp, "model_dump") else {}
+
+    
+
 
 
 

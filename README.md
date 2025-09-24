@@ -1,6 +1,10 @@
 # Metronome Usage-Based Billing Tutorial 
 
-This repository accompanies the [YouTube usage-based billing tutorial](https://youtube.com/playlist?list=PLUG2zXfT80sy3LGcEE7Z0XMOAB9i_4pGH&si=9ETDVYJND3P4kNBl) that integrates with Metronome’s API. Each episode builds on the previous one by adding files and features. This code includes Episode 2 (auth check) and Episode 3 (HTTP ingest endpoint).
+This repository accompanies the [YouTube usage-based billing tutorial](https://youtube.com/playlist?list=PLUG2zXfT80sy3LGcEE7Z0XMOAB9i_4pGH&si=9ETDVYJND3P4kNBl) that integrates with Metronome’s API. Each episode builds on the previous one by adding files and features. This code includes:
+- Episode 2 (auth check) 
+- Episode 3 (HTTP ingest endpoint)
+- Episode 4 (Billable metrics endpoint)
+- Episode 5 (Product and Rate Card endpoint)
 
 ## Prerequisites
 
@@ -87,7 +91,7 @@ Notes:
  - The response includes a `transaction_id` you can search in Connections → Events.
 
 
-## Episode 4: Billable Metrics (dimensional)
+## Episode 4: Billable Metrics
 
 This episode defines a single billable metric for our `EVENT_TYPE` and segments
 usage by tier (i.e image type), using group keys. We aggregate with `SUM` on the `num_images`
@@ -95,7 +99,7 @@ property, and group by `image_type` so one metric reports `standard`,
 `high-res`, and `ultra` separately.
 
 What’s new:
-- `POST /api/setup/metric` — local-only setup route that creates the metric with safe defaults:
+- `POST /api/metrics` — local-only setup route that creates the metric with safe defaults:
   - name: "Nova Image Generation"
   - aggregation_type: `SUM`, aggregation_key: `num_images`
   - group_keys: `[["image_type"]]`
@@ -119,7 +123,48 @@ Notes:
 - Properties are strings per Metronome docs (e.g., `"num_images": "1"`; categorical fields like `"image_type"` remain strings too).
 - Timestamps are RFC3339 UTC with trailing `Z`.
 - The setup route is not idempotent — calling it multiple times will create duplicate metrics.
-- Verify in Metronome: the "Nova Image Generation" metric should show a growing `SUM` and a breakdown by `image_type`.
+- Verify:
+- In Metronome → Billable metrics, confirm "Nova Image Generation" exists.
+- Aggregation is `SUM`; group keys include `image_type`.
+- Send a couple of test events:
+  ```bash
+  curl -s -X POST http://localhost:5000/api/generate -H 'Content-Type: application/json' -d '{"tier":"standard","transaction_id":"ep4-std-001"}'
+  curl -s -X POST http://localhost:5000/api/generate -H 'Content-Type: application/json' -d '{"tier":"ultra","transaction_id":"ep4-ultra-001"}'
+  ```
+- In Connections → Events, search by `transaction_id` to confirm ingestion.
+
+
+
+## Episode 5: Products & Pricing
+
+In this episode, we attach pricing to the metric from Episode 4.
+We use dimensional pricing: a single product tied to the metric and
+three flat rates targeted to `image_type` values (standard, high-res, ultra).
+
+What’s new:
+- `POST /api/pricing` — local-only setup route that creates:
+  - a product tied to the Ep4 metric (`PRODUCT_NAME`)
+  - a rate card (`RATE_CARD_NAME`)
+  - three FLAT rates (cents) for each `image_type`, using `BILLABLE_PRICES`
+ 
+Run the pricing setup (one time per environment):
+```bash
+python app.py
+# in a separate terminal
+curl -sS -X POST http://localhost:5000/api/pricing | jq
+```
+
+
+Notes:
+- Dimensional targeting uses pricing group values: each rate is scoped to `image_type=<tier>`.
+- Prices are configured in `config.py` under `BILLABLE_PRICES` (cents).
+
+
+Verify:
+- In Metronome → Offering -> Products, confirm the product exists (name from `PRODUCT_NAME`).
+- In Metronome → Offering -> Rate cards, confirm `RATE_CARD_NAME` exists.
+- Open the rate card and verify three FLAT rates with `pricing_group_values` targeting:
+  - `image_type=standard`, `image_type=high-res`, `image_type=ultra` with prices from `BILLABLE_PRICES`.
 
 
 ## Viewer Guide

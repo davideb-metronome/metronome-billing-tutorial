@@ -26,3 +26,17 @@ BILLABLE_METRIC_NAME = "Nova Image Generation"
 # Default group keys for dimensional pricing
 # SDK shape: list-of-lists (one inner list per dimension), e.g., [["image_type"], ["region"]]
 BILLABLE_GROUP_KEYS = (("image_type",),)
+
+# Flat per-image prices in cents by image_type
+BILLABLE_PRICES = {
+    "standard": 2,
+    "high-res": 5,
+    "ultra": 10,
+}
+
+# Product and rate card display names
+PRODUCT_NAME = "Nova AI Image Generation"
+RATE_CARD_NAME = "Nova Image Generation Pricing"
+
+# Effective start timestamp for rates 
+RATE_EFFECTIVE_AT = "2025-09-01T00:00:00Z"
