@@ -1,6 +1,4 @@
 """
-Basic configuration for the Episode 3
-
 Loads environment variables and defines shared constants used across
 scripts and services. 
 """
@@ -40,3 +38,6 @@ RATE_CARD_NAME = "Nova Image Generation Pricing"
 
 # Effective start timestamp for rates 
 RATE_EFFECTIVE_AT = "2025-09-01T00:00:00Z"
+
+# Contract start date
+CONTRACT_START_AT = "2025-09-01T00:00:00Z"

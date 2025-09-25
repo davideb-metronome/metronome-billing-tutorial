@@ -14,6 +14,14 @@
   - Creates a rate card
   - Adds three FLAT rates, each scoped to a pricing group value
     (`image_type=standard|high-res|ultra`) using config prices
+
+ Episode 6 (Contracts) adds `POST /api/contract`:
+  - Looks up the demo customer by `DEMO_CUSTOMER_ALIAS` 
+  - Requires a `rate_card_id` from Episode 5
+  - Creates a contract with `starting_at=CONTRACT_START_AT`
+  - Persists `customer_id` and `contract_id` to `.metronome_config.json`
+    to ensure idempotency on re-runs
+  - Recommendation: use a fresh ingest alias per episode to isolate invoices
 """
 
 import logging
@@ -33,6 +41,7 @@ from config import (
     PRODUCT_NAME,
     RATE_CARD_NAME,
     RATE_EFFECTIVE_AT,
+    CONTRACT_START_AT,
 )
 from services.metronome_client import MetronomeClient
 
@@ -282,6 +291,68 @@ def setup_pricing():
         return jsonify({"error": f"Failed to create pricing: {e}"}), 500
 
 
+# ---- Episode 6: Customers, Contracts, and Preview ----
+
+@app.post("/api/contract")
+def setup_contract():
+    """Create a simple contract for the demo customer using the Episode 5 rate card.
+
+    Requires that /api/pricing has been run (to populate rate card ID in local state).
+
+    Quick curl:
+      curl -sS -X POST http://localhost:5000/api/contract | jq
+    """
+    try:
+        state = _load_state()
+        # Lookup customer by ingest alias (must exist already in dashboard)
+        customer = client.get_customer_by_ingest_alias(DEMO_CUSTOMER_ALIAS)
+        if not customer:
+            return jsonify({
+                "error": "Customer not found by DEMO_CUSTOMER_ALIAS. Create a demo customer in the Metronome dashboard and attach this ingest alias, then retry.",
+                "ingest_alias": DEMO_CUSTOMER_ALIAS,
+            }), 400
+        customer_id = customer.get("id")
+
+        # Require rate card id from Episode 5
+        rate_card_id = state.get("rate_card_id")
+        if not rate_card_id:
+            return jsonify({
+                "error": "Missing rate_card_id. Run /api/pricing first to create pricing.",
+            }), 400
+
+        # Create a simple contract referencing the rate card
+        contract = client.create_contract(
+            customer_id=customer_id,
+            rate_card_id=rate_card_id,
+            starting_at=CONTRACT_START_AT,
+        )
+        contract_id = contract.get("id")
+        if not contract_id:
+            return jsonify({"error": "Failed to create contract"}), 500
+
+        # Persist contract in local state
+        state.update({
+            "customer_id": customer_id,
+            "contract_id": contract_id,
+            "contract_start_at": CONTRACT_START_AT,
+        })
+        _save_state(state)
+
+        return jsonify({
+            "success": True,
+            "contract": {
+                "id": contract_id,
+                "customer_id": customer_id,
+                "rate_card_id": rate_card_id,
+                "starting_at": CONTRACT_START_AT,
+            },
+        }), 201
+    except Exception as e:
+        logger.exception("Failed to create contract")
+        return jsonify({"error": f"Failed to create contract: {e}"}), 500
+
+
+
 if __name__ == "__main__":
-    logger.info("Starting Episode 3 API on http://localhost:5000")
+    logger.info("Starting Metronome Demo API on http://localhost:5000")
     app.run(debug=True, port=5000)

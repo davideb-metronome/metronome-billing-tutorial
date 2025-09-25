@@ -5,6 +5,7 @@ This repository accompanies the [YouTube usage-based billing tutorial](https://y
 - Episode 3 (HTTP ingest endpoint)
 - Episode 4 (Billable metrics endpoint)
 - Episode 5 (Product and Rate Card endpoint)
+- Episode 6 (Contract endpoint)
 
 ## Prerequisites
 
@@ -165,6 +166,33 @@ Verify:
 - In Metronome → Offering -> Rate cards, confirm `RATE_CARD_NAME` exists.
 - Open the rate card and verify three FLAT rates with `pricing_group_values` targeting:
   - `image_type=standard`, `image_type=high-res`, `image_type=ultra` with prices from `BILLABLE_PRICES`.
+
+
+## Episode 6: Contracts
+
+This episode binds the Episode 5 pricing to a real customer via a contract.
+
+What’s new:
+- `POST /api/contract` — creates a simple contract for the demo customer using the Episode 5 rate card.
+
+Configuration in `config.py`:
+- `CONTRACT_START_AT` — RFC3339 start timestamp (00:00:00Z).
+
+Prerequisites:
+- You’ve already run Episode 4 (`/api/metrics`) and Episode 5 (`/api/pricing`).
+- In the Metronome dashboard, create a demo customer and attach an ingest alias matching `DEMO_CUSTOMER_ALIAS` in your `.env`.
+
+Run the setup:
+```bash
+python app.py
+# in a separate terminal
+curl -sS -X POST http://localhost:5000/api/contract | jq
+```
+
+Notes:
+- `/api/contract` expects `rate_card_id` from Episode 5 and looks up the customer by `DEMO_CUSTOMER_ALIAS`.
+- Customer creation is explicit in the dashboard; the API does not auto-create customers.
+- The state file `.metronome_config.json` tracks `customer_id` and `contract_id` for reuse.
 
 
 ## Viewer Guide

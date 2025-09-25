@@ -73,6 +73,15 @@ class MetronomeClient:
         # Ingest a single Nova event
         self.client.v1.usage.ingest(usage=[event])
 
+    # ---- Customers ----
+    def get_customer_by_ingest_alias(self, ingest_alias: str) -> Optional[Dict]:
+        """Retrieve a customer by ingest alias (None if not found)."""
+        resp = self.client.v1.customers.list(ingest_alias=ingest_alias)
+        items = getattr(resp, "data", []) or []
+        if items:
+            return items[0].model_dump()
+        return None
+
     # ---- Billable metrics ----
     def create_billable_metric(
         self,
@@ -201,6 +210,31 @@ class MetronomeClient:
         if hasattr(resp, "data"):
             return resp.data.model_dump()
         return resp.model_dump() if hasattr(resp, "model_dump") else {}
+
+    # ---- Contracts ----
+    def create_contract(
+        self,
+        *,
+        customer_id: str,
+        rate_card_id: str,
+        starting_at: str,
+        name: Optional[str] = None,
+        net_payment_terms_days: Optional[int] = None,
+    ) -> Dict:
+        """Create a simple contract referencing a rate card."""
+        payload: Dict = {
+            "customer_id": customer_id,
+            "rate_card_id": rate_card_id,
+            "starting_at": starting_at,
+        }
+        if name is not None:
+            payload["name"] = name
+        if net_payment_terms_days is not None:
+            payload["net_payment_terms_days"] = net_payment_terms_days
+
+        resp = self.client.v1.contracts.create(**payload)
+        return resp.data.model_dump() if hasattr(resp, "data") else {}
+
 
     
 
